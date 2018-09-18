@@ -8,7 +8,7 @@ import (
 )
 
 func TestWindow_Simple(t *testing.T) {
-	win := slidingWindow{
+	win := Window{
 		window:      time.Second * 5,
 		granularity: time.Second,
 		samples:     []int64{1, 2, 3, 4, 5},
@@ -21,7 +21,7 @@ func TestWindow_Simple(t *testing.T) {
 }
 
 func TestWindow_Wrapping(t *testing.T) {
-	win := slidingWindow{
+	win := Window{
 		window:      time.Second * 5,
 		granularity: time.Second,
 		samples:     []int64{1, 2, 3, 4, 5},

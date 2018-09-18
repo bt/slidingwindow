@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// slidingWindow defines a sliding window for use to count averages over time.
-type slidingWindow struct {
+// Window defines a sliding window for use to count averages over time.
+type Window struct {
 	sync.RWMutex
 	window      time.Duration
 	granularity time.Duration
@@ -17,7 +17,7 @@ type slidingWindow struct {
 	stopping    chan struct{}
 }
 
-func New(window, granularity time.Duration) (*slidingWindow, error) {
+func New(window, granularity time.Duration) (*Window, error) {
 	if window == 0 {
 		return nil, errors.New("sliding window cannot be zero")
 	}
@@ -28,7 +28,7 @@ func New(window, granularity time.Duration) (*slidingWindow, error) {
 		return nil, errors.New("window size has to be a multiplier of granularity size")
 	}
 
-	sw := &slidingWindow{
+	sw := &Window{
 		window:      window,
 		granularity: granularity,
 		samples:     make([]int64, int(window/granularity)),
@@ -39,7 +39,7 @@ func New(window, granularity time.Duration) (*slidingWindow, error) {
 	return sw, nil
 }
 
-func (sw *slidingWindow) shifter() {
+func (sw *Window) shifter() {
 	ticker := time.NewTicker(sw.granularity)
 
 	for {
@@ -57,14 +57,14 @@ func (sw *slidingWindow) shifter() {
 	}
 }
 
-func (sw *slidingWindow) Add(v int64) {
+func (sw *Window) Add(v int64) {
 	sw.Lock()
 	defer sw.Unlock()
 	sw.samples[sw.pos] += v
 }
 
 // Last retrieves the last N granularity samples and returns the total
-func (sw *slidingWindow) Last(n int) (int64, error) {
+func (sw *Window) Last(n int) (int64, error) {
 	if n <= 0 {
 		return 0, errors.New("cannot retrieve negative number of samples")
 	}
