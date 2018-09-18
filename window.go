@@ -39,6 +39,14 @@ func New(window, granularity time.Duration) (*Window, error) {
 	return sw, nil
 }
 
+func MustNew(window, granularity time.Duration) *Window {
+	w, err := New(window, granularity)
+	if err != nil {
+		panic(err)
+	}
+	return w
+}
+
 func (sw *Window) shifter() {
 	ticker := time.NewTicker(sw.granularity)
 
