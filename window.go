@@ -71,13 +71,13 @@ func (sw *Window) Add(v int64) {
 	sw.samples[sw.pos] += v
 }
 
-// Last retrieves the last N granularity samples and returns the total
-func (sw *Window) Last(n int) (int64, error) {
+// Last retrieves the last N granularity samples and returns the total and number of samples
+func (sw *Window) Last(n int) (total int64, samples int, err error) {
 	if n <= 0 {
-		return 0, errors.New("cannot retrieve negative number of samples")
+		return 0, 0, errors.New("cannot retrieve negative number of samples")
 	}
 	if n > len(sw.samples) {
-		return 0, errors.Errorf("cannot retrieve %d samples: only %d samples available", n, len(sw.samples))
+		return 0, 0, errors.Errorf("cannot retrieve %d samples: only %d samples available", n, len(sw.samples))
 	}
 
 	var result int64
@@ -86,6 +86,9 @@ func (sw *Window) Last(n int) (int64, error) {
 		lastIdx := sw.pos - (n - 1)
 		for i := n - 1; i >= lastIdx; i-- {
 			result += sw.samples[i]
+			if result != 0 {
+				samples++
+			}
 		}
 	} else {
 		// We are somewhere in the middle; in this case, we subtract the index from position and then wrap around
@@ -95,7 +98,10 @@ func (sw *Window) Last(n int) (int64, error) {
 				idx = len(sw.samples) - idx
 			}
 			result += sw.samples[i]
+			if result != 0 {
+				samples++
+			}
 		}
 	}
-	return result, nil
+	return result, samples, nil
 }
