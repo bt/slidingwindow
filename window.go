@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.uber.org/atomic"
 )
 
 // Window defines a sliding window for use to count averages over time.
@@ -12,7 +13,7 @@ type Window struct {
 	sync.RWMutex
 	window      time.Duration
 	granularity time.Duration
-	samples     []int64
+	samples     []atomic.Int64
 	pos         int
 	stopping    chan struct{}
 }
@@ -31,7 +32,7 @@ func New(window, granularity time.Duration) (*Window, error) {
 	sw := &Window{
 		window:      window,
 		granularity: granularity,
-		samples:     make([]int64, int(window/granularity)),
+		samples:     make([]atomic.Int64, int(window/granularity)),
 		stopping:    make(chan struct{}, 1),
 	}
 	go sw.shifter()
@@ -53,12 +54,10 @@ func (sw *Window) shifter() {
 	for {
 		select {
 		case <-ticker.C:
-			sw.Lock()
 			if sw.pos = sw.pos + 1; sw.pos >= len(sw.samples) {
 				sw.pos = 0
 			}
-			sw.samples[sw.pos] = 0
-			sw.Unlock()
+			sw.samples[sw.pos].Swap(0)
 		case <-sw.stopping:
 			return
 		}
@@ -66,9 +65,7 @@ func (sw *Window) shifter() {
 }
 
 func (sw *Window) Add(v int64) {
-	sw.Lock()
-	defer sw.Unlock()
-	sw.samples[sw.pos] += v
+	sw.samples[sw.pos].Add(v)
 }
 
 // Last retrieves the last N granularity samples and returns the total and number of samples
@@ -85,7 +82,7 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 		// (n - 1) >= sw.pos; in this case, we just count down and add
 		lastIdx := sw.pos - (n - 1)
 		for i := n - 1; i >= lastIdx; i-- {
-			result += sw.samples[i]
+			result += sw.samples[i].Load()
 			if result != 0 {
 				samples++
 			}
@@ -97,7 +94,7 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 			if idx < 0 {
 				idx = len(sw.samples) - idx
 			}
-			result += sw.samples[i]
+			result += sw.samples[i].Load()
 			if result != 0 {
 				samples++
 			}
