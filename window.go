@@ -15,6 +15,7 @@ type Window struct {
 	granularity time.Duration
 	samples     []atomic.Int64
 	pos         int
+	size 		int
 	stopping    chan struct{}
 }
 
@@ -82,8 +83,9 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 		// (n - 1) >= sw.pos; in this case, we just count down and add
 		lastIdx := sw.pos - (n - 1)
 		for i := n - 1; i >= lastIdx; i-- {
-			result += sw.samples[i].Load()
-			if result != 0 {
+			val := sw.samples[i].Load()
+			if val != 0 {
+				result += val
 				samples++
 			}
 		}
@@ -94,8 +96,9 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 			if idx < 0 {
 				idx = len(sw.samples) - idx
 			}
-			result += sw.samples[i].Load()
-			if result != 0 {
+			val := sw.samples[i].Load()
+			if val != 0 {
+				result += val
 				samples++
 			}
 		}
