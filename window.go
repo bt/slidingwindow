@@ -15,11 +15,11 @@ type Window struct {
 	granularity time.Duration
 	samples     []atomic.Int64
 	pos         int
-	size 		int
+	size        int
 	stopping    chan struct{}
 }
 
-func New(window, granularity time.Duration) (*Window, error) {
+func newWindow(window, granularity time.Duration) (*Window, error) {
 	if window == 0 {
 		return nil, errors.New("sliding window cannot be zero")
 	}
@@ -36,9 +36,17 @@ func New(window, granularity time.Duration) (*Window, error) {
 		samples:     make([]atomic.Int64, int(window/granularity)),
 		stopping:    make(chan struct{}, 1),
 	}
-	go sw.shifter()
 
 	return sw, nil
+}
+
+func New(window, granularity time.Duration) (*Window, error) {
+	w, err := newWindow(window, granularity)
+	if err != nil {
+		return nil, err
+	}
+	go w.shifter()
+	return w, nil
 }
 
 func MustNew(window, granularity time.Duration) *Window {
@@ -49,19 +57,34 @@ func MustNew(window, granularity time.Duration) *Window {
 	return w
 }
 
+func MustNewFromSamples(window, granularity time.Duration, samples []int64) *Window {
+	w, err := newWindow(window, granularity)
+	if err != nil {
+		panic(err)
+	}
+
+	fillSamples(w, samples...)
+	go w.shifter()
+	return w
+}
+
 func (sw *Window) shifter() {
 	ticker := time.NewTicker(sw.granularity)
 
 	for {
 		select {
 		case <-ticker.C:
-			if sw.pos = sw.pos + 1; sw.pos >= len(sw.samples) {
-				sw.pos = 0
-			}
+			sw.nextPosition()
 			sw.samples[sw.pos].Swap(0)
 		case <-sw.stopping:
 			return
 		}
+	}
+}
+
+func (sw *Window) nextPosition() {
+	if sw.pos = sw.pos + 1; sw.pos >= len(sw.samples) {
+		sw.pos = 0
 	}
 }
 
@@ -104,4 +127,11 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 		}
 	}
 	return result, samples, nil
+}
+
+func fillSamples(win *Window, i ...int64) {
+	for _, v := range i {
+		win.Add(v)
+		win.nextPosition()
+	}
 }
