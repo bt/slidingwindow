@@ -20,6 +20,38 @@ func TestWindow_Simple(t *testing.T) {
 	assert.Equal(t, samples, int(5))
 }
 
+func TestWindow_LastTime(t *testing.T) {
+	win, err := New(time.Hour * 24, time.Minute * 10)
+	assert.NilError(t, err)
+	win.Add(123)
+	win.Add(456)
+
+	val, _, err := win.Last(1)
+	assert.NilError(t, err)
+	assert.Equal(t, val, int64(579))
+}
+
+func TestWindow_Position(t *testing.T) {
+	win, err := New(time.Hour * 24, time.Minute * 10)
+	assert.NilError(t, err)
+
+	win.Add(123)
+	win.nextPosition()
+	win.Add(456)
+
+	val, _, err := win.Last(1)
+	assert.NilError(t, err)
+	assert.Equal(t, val, int64(456))
+}
+
+func TestWindow_LoadedSamplesAppend(t *testing.T) {
+	win := MustNewFromSamples(time.Hour * 24, time.Minute * 10, []int64{0, 0, 0, 0, 123})
+	win.Add(456)
+	val, _, err := win.Last(1)
+	assert.NilError(t, err)
+	assert.Equal(t, val, int64(579))
+}
+
 func TestWindow_Wrapping(t *testing.T) {
 	win, err := newWindow(time.Second * 5, time.Second)
 	assert.NilError(t, err)
@@ -55,5 +87,5 @@ func TestWindow_LoadSamples(t *testing.T) {
 	i, samples, err = win.Last(10)
 	assert.NilError(t, err)
 	assert.Equal(t, i, int64(150))
-	assert.Equal(t, samples, int(5))
+	assert.Equal(t, samples, int(4))
 }

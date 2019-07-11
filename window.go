@@ -75,7 +75,6 @@ func (sw *Window) shifter() {
 		select {
 		case <-ticker.C:
 			sw.nextPosition()
-			sw.samples[sw.pos].Swap(0)
 		case <-sw.stopping:
 			return
 		}
@@ -86,6 +85,7 @@ func (sw *Window) nextPosition() {
 	if sw.pos = sw.pos + 1; sw.pos >= len(sw.samples) {
 		sw.pos = 0
 	}
+	sw.samples[sw.pos].Swap(0)
 }
 
 func (sw *Window) Add(v int64) {
@@ -102,10 +102,12 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 	}
 
 	var result int64
-	if sw.pos >= (n - 1) {
-		// (n - 1) >= sw.pos; in this case, we just count down and add
-		lastIdx := sw.pos - (n - 1)
-		for i := n - 1; i >= lastIdx; i-- {
+
+	// if position - (n - 1) is higher than or equal to zero, then
+	lastIdx := sw.pos - (n - 1)
+	if lastIdx >= 0 {
+		// We have enough samples to process this request, therefore we iterate till the last index
+		for i := sw.pos; i >= lastIdx; i-- {
 			val := sw.samples[i].Load()
 			if val != 0 {
 				result += val
@@ -130,8 +132,10 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 }
 
 func fillSamples(win *Window, i ...int64) {
-	for _, v := range i {
+	for j, v := range i {
 		win.Add(v)
-		win.nextPosition()
+		if j != len(i)-1 {
+			win.nextPosition()
+		}
 	}
 }
