@@ -98,7 +98,8 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 		return 0, 0, errors.New("cannot retrieve negative number of samples")
 	}
 	if n > len(sw.samples) {
-		return 0, 0, errors.Errorf("cannot retrieve %d samples: only %d samples available", n, len(sw.samples))
+		//return 0, 0, errors.Errorf("cannot retrieve %d samples: only %d samples available", n, len(sw.samples))
+		n = len(sw.samples)
 	}
 
 	var result int64

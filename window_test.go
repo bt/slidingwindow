@@ -7,11 +7,10 @@ import (
 	"gotest.tools/assert"
 )
 
-
 func TestWindow_Simple(t *testing.T) {
-	win, err := newWindow(time.Second * 5, time.Second)
+	win, err := newWindow(time.Second*5, time.Second)
 	assert.NilError(t, err)
-	fillSamples(win, 1,2,3,4,5)
+	fillSamples(win, 1, 2, 3, 4, 5)
 	win.pos = 4
 
 	i, samples, err := win.Last(5)
@@ -21,7 +20,7 @@ func TestWindow_Simple(t *testing.T) {
 }
 
 func TestWindow_LastTime(t *testing.T) {
-	win, err := New(time.Hour * 24, time.Minute * 10)
+	win, err := New(time.Hour*24, time.Minute*10)
 	assert.NilError(t, err)
 	win.Add(123)
 	win.Add(456)
@@ -32,7 +31,7 @@ func TestWindow_LastTime(t *testing.T) {
 }
 
 func TestWindow_Position(t *testing.T) {
-	win, err := New(time.Hour * 24, time.Minute * 10)
+	win, err := New(time.Hour*24, time.Minute*10)
 	assert.NilError(t, err)
 
 	win.Add(123)
@@ -45,7 +44,7 @@ func TestWindow_Position(t *testing.T) {
 }
 
 func TestWindow_LoadedSamplesAppend(t *testing.T) {
-	win := MustNewFromSamples(time.Hour * 24, time.Minute * 10, []int64{0, 0, 0, 0, 123})
+	win := MustNewFromSamples(time.Hour*24, time.Minute*10, []int64{0, 0, 0, 0, 123})
 	win.Add(456)
 	val, _, err := win.Last(1)
 	assert.NilError(t, err)
@@ -53,9 +52,9 @@ func TestWindow_LoadedSamplesAppend(t *testing.T) {
 }
 
 func TestWindow_Wrapping(t *testing.T) {
-	win, err := newWindow(time.Second * 5, time.Second)
+	win, err := newWindow(time.Second*5, time.Second)
 	assert.NilError(t, err)
-	fillSamples(win, 1,2,3,4,5)
+	fillSamples(win, 1, 2, 3, 4, 5)
 	win.pos = 0
 
 	i, samples, err := win.Last(5)
@@ -65,7 +64,7 @@ func TestWindow_Wrapping(t *testing.T) {
 }
 
 func TestWindow_Zero(t *testing.T) {
-	win, err := newWindow(time.Second * 5, time.Second)
+	win, err := newWindow(time.Second*5, time.Second)
 	assert.NilError(t, err)
 	fillSamples(win, 7, 0, 0, 0, 0)
 	win.pos = 0
@@ -88,4 +87,10 @@ func TestWindow_LoadSamples(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, i, int64(150))
 	assert.Equal(t, samples, int(4))
+
+	win2 := MustNewFromSamples(time.Minute, time.Second, []int64{0, 0, 0})
+	win2.Add(177)
+	i, _, err = win2.Last(1)
+	assert.NilError(t, err)
+	assert.Equal(t, i, int64(177))
 }
