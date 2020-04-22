@@ -97,15 +97,16 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 	if n <= 0 {
 		return 0, 0, errors.New("cannot retrieve negative number of samples")
 	}
+
+	sw.mu.RLock()
+	defer sw.mu.RUnlock()
+
 	if n > sw.size {
 		//return 0, 0, errors.Errorf("cannot retrieve %d samples: only %d samples available", n, len(sw.samples))
 		n = sw.size
 	}
 
 	var result int64
-
-	sw.mu.RLock()
-	defer sw.mu.RUnlock()
 
 	// if position - (n - 1) is higher than or equal to zero, then
 	lastIdx := sw.pos - (n - 1)
