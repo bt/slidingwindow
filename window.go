@@ -5,15 +5,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.uber.org/atomic"
 )
 
 // Window defines a sliding window for use to count averages over time.
 type Window struct {
-	sync.RWMutex
+	mu sync.RWMutex
 	window      time.Duration
 	granularity time.Duration
-	samples     []atomic.Int64
+	samples     []int64
 	pos         int
 	size        int
 	stopping    chan struct{}
@@ -33,7 +32,7 @@ func newWindow(window, granularity time.Duration) (*Window, error) {
 	sw := &Window{
 		window:      window,
 		granularity: granularity,
-		samples:     make([]atomic.Int64, int(window/granularity)),
+		samples:     make([]int64, int(window/granularity)),
 		stopping:    make(chan struct{}, 1),
 	}
 
@@ -49,23 +48,15 @@ func New(window, granularity time.Duration) (*Window, error) {
 	return w, nil
 }
 
-func MustNew(window, granularity time.Duration) *Window {
-	w, err := New(window, granularity)
-	if err != nil {
-		panic(err)
-	}
-	return w
-}
-
-func MustNewFromSamples(window, granularity time.Duration, samples []int64) *Window {
+func NewFromSamples(window, granularity time.Duration, samples []int64) (*Window, error) {
 	w, err := newWindow(window, granularity)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	fillSamples(w, samples...)
 	go w.shifter()
-	return w
+	return w, nil
 }
 
 func (sw *Window) shifter() {
@@ -82,14 +73,23 @@ func (sw *Window) shifter() {
 }
 
 func (sw *Window) nextPosition() {
+	sw.mu.Lock()
+
 	if sw.pos = sw.pos + 1; sw.pos >= len(sw.samples) {
 		sw.pos = 0
 	}
-	sw.samples[sw.pos].Swap(0)
+	sw.samples[sw.pos] = 0
+	if sw.size < len(sw.samples) {
+		sw.size++
+	}
+
+	sw.mu.Unlock()
 }
 
 func (sw *Window) Add(v int64) {
-	sw.samples[sw.pos].Add(v)
+	sw.mu.Lock()
+	sw.samples[sw.pos] += v
+	sw.mu.Unlock()
 }
 
 // Last retrieves the last N granularity samples and returns the total and number of samples
@@ -97,19 +97,22 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 	if n <= 0 {
 		return 0, 0, errors.New("cannot retrieve negative number of samples")
 	}
-	if n > len(sw.samples) {
+	if n > sw.size {
 		//return 0, 0, errors.Errorf("cannot retrieve %d samples: only %d samples available", n, len(sw.samples))
-		n = len(sw.samples)
+		n = sw.size
 	}
 
 	var result int64
+
+	sw.mu.RLock()
+	defer sw.mu.RUnlock()
 
 	// if position - (n - 1) is higher than or equal to zero, then
 	lastIdx := sw.pos - (n - 1)
 	if lastIdx >= 0 {
 		// We have enough samples to process this request, therefore we iterate till the last index
 		for i := sw.pos; i >= lastIdx; i-- {
-			val := sw.samples[i].Load()
+			val := sw.samples[i]
 			if val != 0 {
 				result += val
 				samples++
@@ -122,7 +125,7 @@ func (sw *Window) Last(n int) (total int64, samples int, err error) {
 			if idx < 0 {
 				idx = len(sw.samples) - idx
 			}
-			val := sw.samples[i].Load()
+			val := sw.samples[i]
 			if val != 0 {
 				result += val
 				samples++

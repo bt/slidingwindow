@@ -44,7 +44,8 @@ func TestWindow_Position(t *testing.T) {
 }
 
 func TestWindow_LoadedSamplesAppend(t *testing.T) {
-	win := MustNewFromSamples(time.Hour*24, time.Minute*10, []int64{0, 0, 0, 0, 123})
+	win, err := NewFromSamples(time.Hour*24, time.Minute*10, []int64{0, 0, 0, 0, 123})
+	assert.NilError(t, err)
 	win.Add(456)
 	val, _, err := win.Last(1)
 	assert.NilError(t, err)
@@ -76,7 +77,8 @@ func TestWindow_Zero(t *testing.T) {
 }
 
 func TestWindow_LoadSamples(t *testing.T) {
-	win := MustNewFromSamples(time.Minute, time.Second, []int64{10, 20, 30, 40})
+	win, err := NewFromSamples(time.Minute, time.Second, []int64{10, 20, 30, 40})
+	assert.NilError(t, err)
 	i, samples, err := win.Last(10)
 	assert.NilError(t, err)
 	assert.Equal(t, i, int64(100))
@@ -88,7 +90,8 @@ func TestWindow_LoadSamples(t *testing.T) {
 	assert.Equal(t, i, int64(150))
 	assert.Equal(t, samples, int(4))
 
-	win2 := MustNewFromSamples(time.Minute, time.Second, []int64{0, 0, 0})
+	win2, err := NewFromSamples(time.Minute, time.Second, []int64{0, 0, 0})
+	assert.NilError(t, err)
 	win2.Add(177)
 	i, _, err = win2.Last(1)
 	assert.NilError(t, err)
